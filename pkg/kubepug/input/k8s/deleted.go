@@ -191,11 +191,13 @@ func GetDeleted(kubeAPIs parser.KubernetesAPIs, config *genericclioptions.Config
 }
 
 func getResources(dynClient dynamic.Interface, grk groupResourceKind) (schema.GroupVersionResource, *unstructured.UnstructuredList) {
-
+	
 	gv, err := schema.ParseGroupVersion(grk.GroupVersion)
 	if err != nil {
 		log.Fatalf("Failed to Parse GroupVersion of Resource: %s", err)
 	}
+
+	log.Debugf("Getting Resource: %s, %s, %s", gv.Group, gv.Version, grk.ResourceName)
 
 	gvr := schema.GroupVersionResource{Group: gv.Group, Version: gv.Version, Resource: grk.ResourceName}
 	list, err := dynClient.Resource(gvr).List(context.TODO(), metav1.ListOptions{})
@@ -221,9 +223,11 @@ func fixDeletedItemsList(dynClient dynamic.Interface, oldApiItems []unstructured
 	_, newApiItems := getResources(dynClient, grk)
 	newApiItemsMap := make(map[string]bool)
 
-	for _, item := range newApiItems.Items {
-		uid := spew.Sprint(item.Object["metadata"].(map[string]interface{})["uid"])
-		newApiItemsMap[uid] = true
+	if newApiItems != nil {
+		for _, item := range newApiItems.Items {
+			uid := spew.Sprint(item.Object["metadata"].(map[string]interface{})["uid"])
+			newApiItemsMap[uid] = true
+		}
 	}
 
 	deletedItems := []unstructured.Unstructured{}
